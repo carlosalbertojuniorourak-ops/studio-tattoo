@@ -115,7 +115,7 @@ export default function Home() {
     const onScroll = () => {
       setScrolled(window.scrollY > 32);
       if (heroMedia.current) {
-        heroMedia.current.style.transform = `translate3d(0, ${Math.min(window.scrollY * 0.12, 90)}px, 0) scale(1.05)`;
+        heroMedia.current.style.transform = `translate3d(0, ${Math.min(window.scrollY * 0.08, 48)}px, 0)`;
       }
     };
     onScroll();
@@ -215,7 +215,7 @@ Gostaria de saber valores e disponibilidade para agendamento.`;
       </header>
 
       <section id="inicio" className="hero-section relative isolate flex min-h-[100svh] items-end overflow-hidden">
-        <div ref={heroMedia} className="hero-background absolute -inset-[5%] bg-black will-change-transform">
+        <div ref={heroMedia} className="hero-background absolute inset-0 bg-black will-change-transform">
           <Image src="/images/gb-tattoo-logo.png" alt="Logo GB Tattoo Studio" fill priority className="hero-image hero-background-art" sizes="100vw" />
         </div>
         <div className="hero-overlay absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,5,.97)_0%,rgba(5,5,5,.72)_45%,rgba(5,5,5,.17)_78%),linear-gradient(0deg,rgba(5,5,5,.97)_0%,transparent_55%)]" />

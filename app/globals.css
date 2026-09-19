@@ -59,6 +59,12 @@ button { color: inherit; }
 }
 .outline-text { color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,.72); }
 .hero-image { animation: heroZoom 14s ease-out both; }
+.hero-background-art {
+  object-fit: contain;
+  object-position: 78% 34%;
+  opacity: .94;
+  filter: saturate(1.08) contrast(1.08);
+}
 .hero-kicker { animation: rise .7s .1s ease-out both; }
 .hero-title { animation: rise .9s .2s ease-out both; }
 .scroll-arrow { animation: bob 1.8s ease-in-out infinite; }
@@ -103,6 +109,8 @@ button { color: inherit; }
 .field textarea::placeholder { color: rgba(255,255,255,.28); }
 .field input:focus,
 .field textarea:focus { border-color: #8e171c; background: #131313; }
+.portfolio-filters { scrollbar-width: none; }
+.portfolio-filters::-webkit-scrollbar { display: none; }
 
 .cursor-glow {
   position: fixed;
@@ -121,7 +129,38 @@ button { color: inherit; }
 
 @media (pointer: coarse), (max-width: 1023px) { .cursor-glow { display: none; } }
 @media (max-width: 639px) {
-  .hero-title { max-width: 100%; font-size: clamp(3.15rem, 17vw, 5.1rem); line-height: .82; }
+  html { scroll-padding-top: 4.5rem; }
+  .hero-section { min-height: 780px; }
+  .hero-image { filter: brightness(.82) contrast(1.08); }
+  .hero-background-art { object-fit: contain; object-position: center 7% !important; opacity: .96; }
+  .hero-overlay {
+    background: linear-gradient(180deg, rgba(4,4,4,.12) 0%, rgba(4,4,4,.18) 30%, rgba(4,4,4,.72) 55%, rgba(4,4,4,.99) 100%),
+      linear-gradient(90deg, rgba(4,4,4,.32), rgba(4,4,4,.06));
+  }
+  .hero-content { z-index: 2; padding-bottom: 1.35rem; }
+  .hero-title { max-width: 100%; font-size: clamp(2.95rem, 15vw, 4.25rem); line-height: .83; letter-spacing: -.068em; }
+  .hero-intro { background: linear-gradient(90deg, rgba(7,7,7,.5), transparent); }
+  .hero-actions { width: 100%; }
+  .hero-actions a { width: 100%; }
+  .hero-actions .cta-light { height: 3.25rem; }
+  .artist-portrait { min-height: 390px; }
+  .portfolio-caption { transform: none; opacity: 1; }
+  .portfolio-caption > span:first-child { font-size: .52rem; letter-spacing: .14em; }
+  .portfolio-caption > span:last-child { font-size: .68rem; line-height: 1.15; }
+  .portfolio-caption svg { width: 13px; height: 13px; flex: 0 0 auto; }
+  .process-card { min-height: 235px; }
+  .trust-card { min-height: 0; }
+  .cta-project { min-height: 520px; }
+  .cta-project > div:last-child { min-height: 520px; }
+  .cta-project-button { width: 100%; justify-content: space-between; }
+  .booking-form { margin-inline: -.25rem; padding: 1.1rem; }
+  .field { gap: .5rem; }
+  .field input { height: 3.25rem; }
+  .field textarea { min-height: 7.5rem; }
+  .booking-submit { height: 3.5rem; padding-inline: .75rem; letter-spacing: .11em; }
+  .instagram-heading { font-size: clamp(2.35rem, 12.2vw, 3.25rem); }
+  .floating-whatsapp:not(.is-scrolled),
+  .floating-whatsapp.contact-visible { opacity: 0; pointer-events: none; transform: translateY(12px); }
   .floating-whatsapp span { display: none; }
 }
 

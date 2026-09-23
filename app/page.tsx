@@ -307,8 +307,8 @@ Gostaria de saber valores e disponibilidade para agendamento.`;
 
       <section id="artista" className="relative border-t border-white/10 bg-[#0a0a0a] py-16 sm:py-32">
         <div className="mx-auto grid max-w-[1320px] gap-8 px-5 sm:gap-14 sm:px-8 lg:grid-cols-[1.05fr_.95fr] lg:px-12">
-          <div data-reveal className="reveal artist-portrait relative min-h-[410px] overflow-hidden bg-[#111] lg:min-h-[690px]">
-            <Image src="/images/portfolio/work-02.jpg" alt="GB Tattoo MCZ entre os três melhores no Encontro de Tatuadores de Maceió" fill className="object-cover object-center grayscale-[15%]" sizes="(max-width: 1024px) 100vw, 55vw" />
+          <div data-reveal className="reveal relative aspect-video overflow-hidden bg-[#111]">
+            <Image src="/images/portfolio/work-02.jpg" alt="GB Tattoo MCZ entre os três melhores no Encontro de Tatuadores de Maceió" fill quality={95} className="object-cover object-center grayscale-[15%]" sizes="(max-width: 1024px) calc(100vw - 2.5rem), 55vw" />
             <div className="award-gradient absolute inset-0" />
             <div className="award-overlay absolute inset-x-0 bottom-0 p-6 sm:p-9">
               <p className="award-label text-xs font-bold uppercase tracking-[0.24em] text-white/55">Registro público</p>

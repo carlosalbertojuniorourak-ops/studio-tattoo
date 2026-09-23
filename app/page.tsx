@@ -58,7 +58,7 @@ const portfolioItems: Array<{
   { src: "/images/portfolio/work-04.jpg", title: "Fechamento de braço", category: "Preto e cinza" },
   { src: "/images/portfolio/work-03.jpg", title: "Projeto autoral", category: "Colorido" },
   { src: "/images/portfolio/work-10.jpg", title: "Cobertura realista", category: "Cobertura" },
-  { src: "/images/portfolio/work-09.jpg", title: "Composição religiosa", category: "Preto e cinza" },
+  { src: "/images/portfolio/work-09.jpg", title: "Fechamento de Braço", category: "Preto e cinza" },
   { src: "/images/portfolio/work-07.jpg", title: "Realismo animal", category: "Colorido" },
   { src: "/images/portfolio/work-05.jpg", title: "Reconstrução e cobertura", category: "Cobertura" },
   { src: "/images/portfolio/work-11.jpg", title: "Peitoral em preto e cinza", category: "Preto e cinza" },

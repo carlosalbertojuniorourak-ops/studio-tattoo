@@ -7,7 +7,6 @@ import {
   ArrowRight,
   ArrowUpRight,
   CalendarDays,
-  ChevronRight,
   MapPin,
   Menu,
   MessageCircle,
@@ -46,12 +45,12 @@ const quickMessage = encodeURIComponent(
 );
 const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${quickMessage}`;
 
-type Category = "Todos" | "Preto e cinza" | "Cobertura" | "Old school" | "Colorido";
+type PortfolioCategory = "Preto e cinza" | "Cobertura" | "Old school" | "Colorido";
 
 const portfolioItems: Array<{
   src: string;
   title: string;
-  category: Exclude<Category, "Todos">;
+  category: PortfolioCategory;
   position?: string;
 }> = [
   { src: "/images/portfolio/work-08.jpg", title: "Costas em grande escala", category: "Preto e cinza", position: "center 35%" },
@@ -67,8 +66,6 @@ const portfolioItems: Array<{
   { src: "/images/portfolio/work-12.jpg", title: "Projeto de peitoral", category: "Preto e cinza" },
 ];
 
-const categories: Category[] = ["Todos", "Preto e cinza", "Cobertura", "Old school", "Colorido"];
-
 const navLinks = [
   ["Início", "#inicio"],
   ["Artista", "#artista"],
@@ -79,9 +76,9 @@ const navLinks = [
 
 function SectionLabel({ number, children }: { number: string; children: React.ReactNode }) {
   return (
-    <p className="mb-6 flex items-center gap-3 text-[0.66rem] font-extrabold uppercase tracking-[0.28em] text-white/45">
+    <p className="section-label mb-6 flex items-center gap-3 text-[0.66rem] font-extrabold uppercase tracking-[0.28em] text-white/45">
       <span className="text-[#a91e24]">{number}</span>
-      <span className="h-px w-8 bg-white/20" />
+      <span className="section-label-line h-px w-8 bg-white/20" />
       {children}
     </p>
   );
@@ -105,32 +102,81 @@ function CursorGlow() {
 
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
-  const [category, setCategory] = useState<Category>("Todos");
   const [selectedWork, setSelectedWork] = useState<(typeof portfolioItems)[number] | null>(null);
   const [style, setStyle] = useState("");
   const [contactVisible, setContactVisible] = useState(false);
   const heroMedia = useRef<HTMLDivElement>(null);
+  const heroContent = useRef<HTMLDivElement>(null);
+  const heroOutline = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    const onScroll = () => {
-      setScrolled(window.scrollY > 32);
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const mobileViewport = window.matchMedia("(max-width: 767px)");
+    let frame = 0;
+
+    const updateScrollEffects = () => {
+      frame = 0;
+      const scrollY = window.scrollY;
+      setScrolled(scrollY > 32);
+
+      const revealThreshold = window.innerHeight * 0.86;
+      document.querySelectorAll<HTMLElement>("[data-reveal]:not(.is-visible)").forEach((element) => {
+        if (element.getBoundingClientRect().top <= revealThreshold) {
+          element.classList.add("is-visible");
+        }
+      });
+
+      if (reduceMotion.matches) return;
+
+      const isMobile = mobileViewport.matches;
+      const mediaOffset = Math.min(scrollY * (isMobile ? 0.035 : 0.055), isMobile ? 22 : 38);
+      const mediaScale = 1 + Math.min(scrollY / Math.max(window.innerHeight, 1), 1) * (isMobile ? 0.008 : 0.014);
+      const contentOffset = Math.min(scrollY * (isMobile ? 0.012 : 0.022), isMobile ? 6 : 16);
+      const outlineProgress = Math.min(scrollY / Math.max(window.innerHeight * 0.75, 1), 1);
+      const outlineShift = (outlineProgress * 2 - 1) * (isMobile ? 4 : 12);
+
       if (heroMedia.current) {
-        heroMedia.current.style.transform = `translate3d(0, ${Math.min(window.scrollY * 0.08, 48)}px, 0)`;
+        heroMedia.current.style.transform = `translate3d(0, ${mediaOffset}px, 0) scale(${mediaScale})`;
+      }
+      if (heroContent.current) {
+        heroContent.current.style.transform = `translate3d(0, ${contentOffset}px, 0)`;
+      }
+      if (heroOutline.current) {
+        heroOutline.current.style.transform = `translate3d(${outlineShift}px, 0, 0)`;
       }
     };
-    onScroll();
+
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(updateScrollEffects);
+    };
+
+    updateScrollEffects();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      (entries) => entries.forEach((entry) => entry.isIntersecting && entry.target.classList.add("is-visible")),
-      { threshold: 0.12 },
+      (entries) => entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      }),
+      { threshold: 0.08, rootMargin: "0px 0px -15% 0px" },
     );
-    document.querySelectorAll("[data-reveal]").forEach((element) => observer.observe(element));
+    document.querySelectorAll<HTMLElement>("[data-reveal]").forEach((element) => {
+      const siblings = element.parentElement
+        ? Array.from(element.parentElement.querySelectorAll<HTMLElement>(":scope > [data-reveal]"))
+        : [];
+      const siblingIndex = Math.max(siblings.indexOf(element), 0);
+      element.style.setProperty("--reveal-delay", `${Math.min(siblingIndex, 4) * 70}ms`);
+      observer.observe(element);
+    });
     return () => observer.disconnect();
-  }, [category]);
+  }, []);
 
   useEffect(() => {
     const contact = document.querySelector("#contato");
@@ -142,8 +188,6 @@ export default function Home() {
     observer.observe(contact);
     return () => observer.disconnect();
   }, []);
-
-  const filteredWorks = category === "Todos" ? portfolioItems : portfolioItems.filter((item) => item.category === category);
 
   function handleBooking(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -166,14 +210,21 @@ Gostaria de saber valores e disponibilidade para agendamento.`;
   }
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#070707] text-white">
+    <main className="min-h-screen overflow-x-clip bg-[#070707] text-white">
       <CursorGlow />
 
       <header className={`fixed inset-x-0 top-0 z-40 border-b transition-all duration-500 ${scrolled ? "border-white/10 bg-[#080808]/92 shadow-2xl backdrop-blur-xl" : "border-transparent bg-transparent"}`}>
-        <div className="mx-auto flex h-[4.5rem] max-w-[1440px] items-center justify-between px-4 sm:h-20 sm:px-8 lg:px-12">
-          <a href="#inicio" className="group flex items-center gap-3" aria-label="GB Tattoo MCZ — início">
-            <span className="grid size-11 place-items-center rounded-full border border-[#8e171c]/80 font-black tracking-tighter transition group-hover:bg-[#8e171c]">GB</span>
-            <span className="hidden text-[0.68rem] font-bold uppercase tracking-[0.28em] text-white/70 sm:block">Tattoo MCZ</span>
+        <div className="site-header-inner mx-auto flex h-[4.75rem] max-w-[1440px] items-center justify-between px-5 sm:h-20 sm:px-8 lg:px-12">
+          <a href="#inicio" className="group flex min-w-0 items-center" aria-label="GB Tattoo MCZ — início">
+            <Image
+              src="/images/gb-tattoo-logo.png"
+              alt="GB Tattoo Studio"
+              width={640}
+              height={640}
+              priority
+              className="brand-logo size-16 object-contain"
+              sizes="(max-width: 639px) 64px, 68px"
+            />
           </a>
 
           <nav className="hidden items-center gap-8 text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-white/65 lg:flex" aria-label="Navegação principal">
@@ -190,8 +241,8 @@ Gostaria de saber valores e disponibilidade para agendamento.`;
               Agendar <ArrowUpRight size={15} />
             </a>
             <Sheet>
-              <SheetTrigger className="grid size-11 place-items-center border border-white/15 bg-black/20 lg:hidden" aria-label="Abrir menu">
-                <Menu size={20} />
+              <SheetTrigger className="menu-trigger grid size-[3.25rem] place-items-center border border-white/20 bg-black/35 transition hover:border-white/40 lg:hidden" aria-label="Abrir menu">
+                <Menu size={22} strokeWidth={1.6} />
               </SheetTrigger>
               <SheetContent className="w-full border-white/10 bg-[#090909] p-6 sm:max-w-md sm:p-8">
                 <SheetTitle className="sr-only">Menu</SheetTitle>
@@ -216,15 +267,26 @@ Gostaria de saber valores e disponibilidade para agendamento.`;
 
       <section id="inicio" className="hero-section relative isolate flex min-h-[100svh] items-end overflow-hidden">
         <div ref={heroMedia} className="hero-background absolute inset-0 bg-black will-change-transform">
-          <Image src="/images/gb-tattoo-logo.png" alt="Logo GB Tattoo Studio" fill priority className="hero-image hero-background-art" sizes="100vw" />
+          <div className="hero-art-frame">
+            <Image src="/images/gb-tattoo-logo.png" alt="Logo GB Tattoo Studio" fill priority className="hero-image hero-background-art" sizes="(max-width: 639px) 132vw, 100vw" />
+          </div>
         </div>
         <div className="hero-overlay absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,5,.97)_0%,rgba(5,5,5,.72)_45%,rgba(5,5,5,.17)_78%),linear-gradient(0deg,rgba(5,5,5,.97)_0%,transparent_55%)]" />
         <div className="grain absolute inset-0 opacity-[0.08]" />
-        <div className="hero-content relative mx-auto grid w-full max-w-[1440px] gap-10 px-5 pb-7 pt-28 sm:px-8 sm:pb-16 sm:pt-32 lg:grid-cols-[1fr_320px] lg:px-12 lg:pb-20">
+        <div ref={heroContent} className="hero-content relative mx-auto grid w-full max-w-[1440px] gap-10 px-5 pb-7 pt-28 sm:px-8 sm:pb-16 sm:pt-32 lg:grid-cols-[1fr_320px] lg:px-12 lg:pb-20">
           <div className="max-w-5xl">
-            <p className="hero-kicker mb-4 flex items-center gap-3 text-[0.68rem] font-bold uppercase tracking-[0.24em] text-white/65 sm:mb-5 sm:text-xs sm:tracking-[0.28em]"><span className="h-px w-8 bg-[#a91e24] sm:w-10" /> Maceió — Alagoas</p>
+            <p className="hero-kicker mb-4 flex items-center gap-3 text-[0.68rem] font-bold uppercase tracking-[0.24em] text-white/65 sm:mb-5 sm:text-xs sm:tracking-[0.28em]"><span className="hero-kicker-line h-px w-8 bg-[#a91e24] sm:w-10" /><span className="hero-kicker-text">Maceió — Alagoas</span></p>
             <h1 className="hero-title max-w-4xl text-[clamp(3.55rem,10vw,9.6rem)] font-black uppercase leading-[0.78] tracking-[-0.075em]">
-              Arte na pele.<br /><span className="outline-text">Identidade</span><br />pra vida.
+              <span className="hero-title-row hero-title-opening">
+                <span className="hero-title-mask"><span className="hero-title-text">Arte na</span></span>
+                <span className="hero-title-mask"><span className="hero-title-text">pele.</span></span>
+              </span>
+              <span ref={heroOutline} className="hero-title-row hero-title-outline-row">
+                <span className="hero-title-mask hero-title-outline outline-text"><span className="hero-title-text">Identidade</span></span>
+              </span>
+              <span className="hero-title-row">
+                <span className="hero-title-mask"><span className="hero-title-text">pra vida.</span></span>
+              </span>
             </h1>
             <div className="hero-intro mt-6 flex max-w-3xl flex-col gap-5 border-l border-[#8e171c] pl-4 sm:mt-8 sm:flex-row sm:items-end sm:justify-between sm:gap-7 sm:pl-7">
               <p className="max-w-md text-[0.94rem] leading-6 text-white/67 sm:text-lg sm:leading-relaxed">Tatuagens autorais, coberturas em alto padrão e trabalhos premiados — criados para transformar sua ideia em algo único.</p>
@@ -243,19 +305,19 @@ Gostaria de saber valores e disponibilidade para agendamento.`;
         <a href="#artista" className="absolute bottom-7 right-6 hidden items-center gap-3 text-[0.58rem] font-bold uppercase tracking-[0.26em] text-white/45 xl:flex">Scroll para explorar <ArrowDown className="scroll-arrow" size={14} /></a>
       </section>
 
-      <section id="artista" className="relative border-t border-white/10 bg-[#0a0a0a] py-20 sm:py-32">
-        <div className="mx-auto grid max-w-[1320px] gap-10 px-5 sm:gap-14 sm:px-8 lg:grid-cols-[1.05fr_.95fr] lg:px-12">
+      <section id="artista" className="relative border-t border-white/10 bg-[#0a0a0a] py-16 sm:py-32">
+        <div className="mx-auto grid max-w-[1320px] gap-8 px-5 sm:gap-14 sm:px-8 lg:grid-cols-[1.05fr_.95fr] lg:px-12">
           <div data-reveal className="reveal artist-portrait relative min-h-[410px] overflow-hidden bg-[#111] lg:min-h-[690px]">
             <Image src="/images/portfolio/work-02.jpg" alt="GB Tattoo MCZ entre os três melhores no Encontro de Tatuadores de Maceió" fill className="object-cover object-center grayscale-[15%]" sizes="(max-width: 1024px) 100vw, 55vw" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-6 sm:p-9">
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-white/55">Registro público</p>
-              <p className="mt-2 max-w-md text-2xl font-black uppercase leading-tight">Entre os três melhores no Encontro de Tatuadores de Maceió</p>
+            <div className="award-gradient absolute inset-0" />
+            <div className="award-overlay absolute inset-x-0 bottom-0 p-6 sm:p-9">
+              <p className="award-label text-xs font-bold uppercase tracking-[0.24em] text-white/55">Registro público</p>
+              <p className="award-title mt-2 max-w-lg font-black uppercase">Entre os três<br className="award-mobile-break" /> melhores<br className="award-mobile-break" /> no encontro de<br className="award-mobile-break" /> tatuadores de Maceió</p>
             </div>
           </div>
           <div data-reveal className="reveal flex flex-col justify-center lg:pl-10">
             <SectionLabel number="01">Sobre o artista</SectionLabel>
-            <h2 className="max-w-xl text-[clamp(3rem,6vw,6.5rem)] font-black uppercase leading-[0.86] tracking-[-0.065em]">Técnica, cuidado e <span className="text-[#a91e24]">identidade.</span></h2>
+            <h2 className="section-title max-w-xl text-[clamp(3rem,6vw,6.5rem)] font-black uppercase leading-[0.86] tracking-[-0.065em]">Técnica, cuidado e <span className="text-[#a91e24]">identidade.</span></h2>
             <p className="mt-7 max-w-xl text-base leading-7 text-white/62 sm:mt-8 sm:text-lg sm:leading-8">O GB Tattoo MCZ desenvolve projetos personalizados em Maceió, com atenção à leitura do corpo, acabamento e durabilidade. O portfólio público reúne trabalhos em preto e cinza, delicados, old school, grandes composições e coberturas em alto padrão.</p>
             <p className="mt-5 max-w-xl leading-7 text-white/48">Do primeiro contato ao pós-tattoo, cada etapa é conduzida com orientação clara, materiais adequados e foco em uma experiência segura e profissional.</p>
             <div className="mt-10 grid grid-cols-2 gap-px bg-white/10 sm:grid-cols-3">
@@ -267,23 +329,18 @@ Gostaria de saber valores e disponibilidade para agendamento.`;
         </div>
       </section>
 
-      <section id="portfolio" className="bg-[#070707] py-20 sm:py-32">
+      <section id="portfolio" className="bg-[#070707] py-16 sm:py-32">
         <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
-          <div data-reveal className="reveal flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
+          <div data-reveal className="reveal">
             <div>
               <SectionLabel number="02">Portfólio</SectionLabel>
-              <h2 className="text-[clamp(3rem,7vw,7.3rem)] font-black uppercase leading-[0.82] tracking-[-0.07em]">Trabalhos<br /><span className="outline-text">recentes.</span></h2>
-            </div>
-            <div className="portfolio-filters -mx-5 flex max-w-2xl snap-x gap-2 overflow-x-auto px-5 pb-2 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0" role="group" aria-label="Filtrar portfólio">
-              {categories.map((item) => (
-                <button key={item} onClick={() => setCategory(item)} className={`shrink-0 snap-start border px-4 py-3 text-[0.65rem] font-bold uppercase tracking-[0.14em] transition ${category === item ? "border-[#8e171c] bg-[#8e171c] text-white" : "border-white/15 text-white/55 hover:border-white/45 hover:text-white"}`}>{item}</button>
-              ))}
+              <h2 className="section-title text-[clamp(3rem,7vw,7.3rem)] font-black uppercase leading-[0.82] tracking-[-0.07em]">Trabalhos<br /><span className="outline-text">recentes.</span></h2>
             </div>
           </div>
 
-          <div className="mt-8 columns-2 gap-2.5 sm:mt-12 sm:columns-3 sm:gap-3 lg:columns-4 lg:gap-5">
-            {filteredWorks.map((item, index) => (
-              <button key={item.src} data-reveal onClick={() => setSelectedWork(item)} className={`reveal portfolio-card group relative mb-3 block w-full overflow-hidden text-left lg:mb-5 ${index % 5 === 0 ? "aspect-[3/4]" : index % 3 === 0 ? "aspect-[4/5]" : "aspect-square"}`}>
+          <div className="mt-7 grid grid-cols-2 gap-3 sm:mt-10 sm:grid-cols-3 sm:gap-3 lg:block lg:columns-4 lg:gap-5">
+            {portfolioItems.map((item, index) => (
+              <button key={item.src} data-reveal onClick={() => setSelectedWork(item)} className={`reveal portfolio-card group relative block aspect-[3/4] w-full overflow-hidden text-left lg:mb-5 ${index % 5 === 0 ? "lg:aspect-[3/4]" : index % 3 === 0 ? "lg:aspect-[4/5]" : "lg:aspect-square"}`}>
                 <Image src={item.src} alt={`${item.title} — trabalho de ${item.category} do GB Tattoo MCZ`} fill loading="lazy" className="object-cover transition duration-700 group-hover:scale-105" style={{ objectPosition: item.position }} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
                 <span className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent opacity-70 transition group-hover:opacity-100" />
                 <span className="portfolio-caption absolute inset-x-0 bottom-0 translate-y-2 p-3 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100 sm:p-5">
@@ -314,31 +371,34 @@ Gostaria de saber valores e disponibilidade para agendamento.`;
         </DialogContent>
       </Dialog>
 
-      <section id="processo" className="border-y border-white/10 bg-[#0c0c0c] py-20 sm:py-32">
+      <section id="processo" className="border-y border-white/10 bg-[#0c0c0c] py-16 sm:py-32">
         <div className="mx-auto max-w-[1320px] px-5 sm:px-8 lg:px-12">
-          <div data-reveal className="reveal max-w-3xl"><SectionLabel number="03">Da ideia à tatuagem</SectionLabel><h2 className="text-[clamp(3rem,6vw,6rem)] font-black uppercase leading-[0.86] tracking-[-0.06em]">Seu projeto,<br />passo a passo.</h2></div>
-          <div className="mt-10 grid gap-px bg-white/10 sm:mt-14 md:grid-cols-2 lg:grid-cols-4">
+          <div data-reveal className="reveal max-w-3xl"><SectionLabel number="03">Da ideia à tatuagem</SectionLabel><h2 className="section-title text-[clamp(3rem,6vw,6rem)] font-black uppercase leading-[0.86] tracking-[-0.06em]">Seu projeto,<br />passo a passo.</h2></div>
+          <div className="mt-10 grid gap-5 sm:mt-14 sm:gap-6 md:grid-cols-2 lg:grid-cols-4 lg:gap-4">
             {[
               ["01", "Sua ideia", "Conte o que você imagina, o local do corpo e as referências que fazem sentido."],
               ["02", "Criação", "O conceito é desenvolvido ou adaptado para funcionar de verdade na pele."],
               ["03", "Agendamento", "Alinhamos tamanho, detalhes, valor, data e horário pelo WhatsApp."],
               ["04", "Tattoo", "No estúdio, o projeto ganha vida com cuidado em cada etapa."],
             ].map(([number, title, text]) => (
-              <article data-reveal key={number} className="reveal process-card group min-h-0 bg-[#0c0c0c] p-6 transition hover:bg-[#111] sm:min-h-72 sm:p-9">
-                <span className="text-xs font-bold tracking-[0.2em] text-[#a91e24]">{number}</span>
-                <h3 className="mt-9 text-2xl font-black uppercase tracking-[-0.04em] sm:mt-16">{title}</h3>
-                <p className="mt-4 leading-7 text-white/48">{text}</p>
-                <ArrowRight className="mt-6 text-white/25 transition group-hover:translate-x-2 group-hover:text-white sm:mt-8" size={20} />
+              <article data-reveal key={number} className="reveal process-card group relative flex min-h-0 flex-col overflow-hidden border border-white/[0.08] bg-white/[0.025] p-6 sm:min-h-[300px] sm:p-8 lg:min-h-[330px]">
+                <div className="flex items-center gap-3" aria-hidden="true">
+                  <span className="process-number">{number}</span>
+                  <span className="process-number-line h-px w-8 bg-[#a91e24]/70" />
+                </div>
+                <h3 className="process-title mt-8 text-[clamp(1.75rem,7vw,2.25rem)] font-black uppercase leading-[0.98] tracking-[-0.045em] sm:mt-auto">{title}</h3>
+                <span className="mt-5 h-px w-full bg-white/[0.08]" aria-hidden="true" />
+                <p className="process-copy mt-5 max-w-[30rem] text-base leading-[1.65] text-white/55">{text}</p>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="avaliacoes" className="relative overflow-hidden bg-[#070707] py-20 sm:py-32">
+      <section id="avaliacoes" className="relative overflow-hidden bg-[#070707] py-16 sm:py-32">
         <div className="absolute right-[-8%] top-[-20%] size-[540px] rounded-full bg-[#8e171c]/10 blur-[120px]" />
         <div className="relative mx-auto grid max-w-[1320px] gap-12 px-5 sm:px-8 lg:grid-cols-[.8fr_1.2fr] lg:px-12">
-          <div data-reveal className="reveal"><SectionLabel number="04">Confiança</SectionLabel><h2 className="text-[clamp(3rem,6vw,6rem)] font-black uppercase leading-[0.86] tracking-[-0.06em]">Quem faz,<br /><span className="text-[#a91e24]">recomenda.</span></h2><p className="mt-7 max-w-md leading-7 text-white/50">Para preservar a autenticidade, não publicamos depoimentos sem identificação verificável. Os feedbacks reais estão reunidos no destaque oficial do Instagram.</p><a href={FEEDBACK_URL} target="_blank" rel="noreferrer" className="mt-8 inline-flex items-center gap-2 border-b border-white/30 pb-2 text-xs font-bold uppercase tracking-[0.16em]">Ver feedbacks reais <ArrowUpRight size={15} /></a></div>
+          <div data-reveal className="reveal"><SectionLabel number="04">Confiança</SectionLabel><h2 className="section-title text-[clamp(3rem,6vw,6rem)] font-black uppercase leading-[0.86] tracking-[-0.06em]">Quem faz,<br /><span className="text-[#a91e24]">recomenda.</span></h2><p className="mt-7 max-w-md leading-7 text-white/50">Para preservar a autenticidade, não publicamos depoimentos sem identificação verificável. Os feedbacks reais estão reunidos no destaque oficial do Instagram.</p><a href={FEEDBACK_URL} target="_blank" rel="noreferrer" className="mt-8 inline-flex items-center gap-2 border-b border-white/30 pb-2 text-xs font-bold uppercase tracking-[0.16em]">Ver feedbacks reais <ArrowUpRight size={15} /></a></div>
             <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
             {[
               { icon: MessageCircle, title: "Feedbacks públicos", text: "Avaliações compartilhadas pelo próprio artista no destaque oficial do perfil." },
@@ -357,17 +417,17 @@ Gostaria de saber valores e disponibilidade para agendamento.`;
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(6,6,6,.96),rgba(6,6,6,.6),rgba(6,6,6,.35)),linear-gradient(0deg,rgba(6,6,6,.7),transparent)]" />
         <div data-reveal className="reveal relative mx-auto flex min-h-[560px] max-w-[1320px] flex-col items-start justify-center px-5 py-16 sm:min-h-[68vh] sm:px-8 sm:py-20 lg:px-12">
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/55">Seu próximo projeto começa aqui</p>
-          <h2 className="mt-5 max-w-4xl text-[clamp(3.2rem,8vw,8rem)] font-black uppercase leading-[0.82] tracking-[-0.07em]">Tem uma ideia<br />de tatuagem?</h2>
+          <h2 className="section-title mt-5 max-w-4xl text-[clamp(3.2rem,8vw,8rem)] font-black uppercase leading-[0.82] tracking-[-0.07em]">Tem uma ideia<br />de tatuagem?</h2>
           <p className="mt-7 max-w-lg text-lg leading-8 text-white/62">Conte sua ideia e vamos transformar ela em um projeto único.</p>
           <a href="#contato" className="cta-project-button mt-8 inline-flex h-14 items-center gap-5 bg-[#8e171c] px-7 text-xs font-black uppercase tracking-[0.18em] transition hover:bg-white hover:text-black sm:mt-9 sm:h-16 sm:px-8">Pedir orçamento <ArrowRight className="cta-arrow" size={20} /></a>
         </div>
       </section>
 
-      <section id="contato" className="bg-[#0b0b0b] py-20 sm:py-32">
+      <section id="contato" className="bg-[#0b0b0b] py-16 sm:py-32">
         <div className="mx-auto grid max-w-[1320px] gap-10 px-5 sm:gap-14 sm:px-8 lg:grid-cols-[.8fr_1.2fr] lg:px-12">
           <div data-reveal className="reveal">
             <SectionLabel number="05">Agendamento</SectionLabel>
-            <h2 className="text-[clamp(3rem,6vw,6rem)] font-black uppercase leading-[0.86] tracking-[-0.06em]">Agende sua<br />tatuagem.</h2>
+            <h2 className="section-title text-[clamp(3rem,6vw,6rem)] font-black uppercase leading-[0.86] tracking-[-0.06em]">Agende sua<br />tatuagem.</h2>
             <p className="mt-7 max-w-md leading-7 text-white/50">Preencha os detalhes principais. Ao continuar, sua mensagem será montada automaticamente para o WhatsApp oficial.</p>
             <div className="mt-10 flex items-start gap-4 border-t border-white/10 pt-7"><MapPin className="mt-1 text-[#a91e24]" size={21} /><div><p className="font-bold uppercase">Maceió — AL</p><p className="mt-2 text-sm leading-6 text-white/42">O endereço completo é compartilhado durante o agendamento pelo canal oficial.</p></div></div>
           </div>
@@ -392,12 +452,12 @@ Gostaria de saber valores e disponibilidade para agendamento.`;
         </div>
       </section>
 
-      <section className="border-y border-white/10 bg-[#070707] py-20 sm:py-24">
+      <section className="border-y border-white/10 bg-[#070707] py-16 sm:py-24">
         <div className="mx-auto max-w-[1320px] px-5 sm:px-8 lg:px-12">
-          <div data-reveal className="reveal flex flex-col justify-between gap-6 sm:flex-row sm:items-end"><div><SectionLabel number="06">Instagram</SectionLabel><h2 className="instagram-heading text-[clamp(2.8rem,6vw,6rem)] font-black uppercase leading-[0.86] tracking-[-0.06em]">Acompanhe o<br />trabalho de perto.</h2></div><a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-3 text-sm font-black uppercase tracking-[0.12em]">@gbtattoomcz_oficial <ArrowUpRight size={18} /></a></div>
+          <div data-reveal className="reveal flex flex-col justify-between gap-6 sm:flex-row sm:items-end"><div><SectionLabel number="06">Instagram</SectionLabel><h2 className="section-title instagram-heading text-[clamp(2.8rem,6vw,6rem)] font-black uppercase leading-[0.86] tracking-[-0.06em]">Acompanhe o<br />trabalho de perto.</h2></div><a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-3 text-sm font-black uppercase tracking-[0.12em]">@gbtattoomcz_oficial <ArrowUpRight size={18} /></a></div>
           <div className="mt-9 grid grid-cols-2 gap-2 sm:mt-12 md:grid-cols-4">
             {["work-01.jpg", "work-08.jpg", "work-09.jpg", "work-03.jpg"].map((image, index) => (
-              <a data-reveal key={image} href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className="reveal group relative aspect-square overflow-hidden"><Image src={`/images/portfolio/${image}`} alt={`Trabalho do portfólio GB Tattoo MCZ ${index + 1}`} fill loading="lazy" className="object-cover transition duration-700 group-hover:scale-105" sizes="(max-width: 768px) 50vw, 25vw" /><span className="absolute inset-0 grid place-items-center bg-black/50 opacity-0 transition group-hover:opacity-100"><span className="text-xs font-black uppercase tracking-[0.18em]">Ver no Instagram</span></span></a>
+              <a data-reveal key={image} href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className="reveal image-reveal group relative aspect-square overflow-hidden"><Image src={`/images/portfolio/${image}`} alt={`Trabalho do portfólio GB Tattoo MCZ ${index + 1}`} fill loading="lazy" className="object-cover transition duration-700 group-hover:scale-105" sizes="(max-width: 768px) 50vw, 25vw" /><span className="absolute inset-0 grid place-items-center bg-black/50 opacity-0 transition group-hover:opacity-100"><span className="text-xs font-black uppercase tracking-[0.18em]">Ver no Instagram</span></span></a>
             ))}
           </div>
         </div>
@@ -413,7 +473,7 @@ Gostaria de saber valores e disponibilidade para agendamento.`;
         </div>
       </footer>
 
-      <a href={whatsappUrl} target="_blank" rel="noreferrer" className={`floating-whatsapp ${scrolled ? "is-scrolled" : ""} ${contactVisible ? "contact-visible" : ""} group fixed bottom-4 right-4 z-30 flex h-13 min-w-13 items-center justify-center rounded-full bg-[#25d366] px-3.5 text-black shadow-[0_12px_40px_rgba(37,211,102,.3)] transition hover:-translate-y-1 sm:bottom-5 sm:right-5 sm:h-14 sm:px-4`} aria-label="Solicitar orçamento pelo WhatsApp"><MessageCircle size={22} fill="currentColor" /><span className="max-w-0 overflow-hidden whitespace-nowrap text-xs font-black uppercase tracking-[0.12em] opacity-0 transition-all duration-300 group-hover:ml-3 group-hover:max-w-44 group-hover:opacity-100">Solicitar orçamento</span></a>
+      <a href={whatsappUrl} target="_blank" rel="noreferrer" className={`floating-whatsapp ${scrolled ? "is-scrolled" : ""} ${contactVisible ? "contact-visible" : ""} group fixed bottom-4 right-4 z-30 flex h-14 min-w-14 items-center justify-center rounded-full bg-[#25d366] px-4 text-black shadow-[0_12px_40px_rgba(37,211,102,.3)] transition hover:-translate-y-1 sm:bottom-5 sm:right-5 sm:h-14 sm:px-4`} aria-label="Solicitar orçamento pelo WhatsApp"><MessageCircle size={22} fill="currentColor" /><span className="max-w-0 overflow-hidden whitespace-nowrap text-xs font-black uppercase tracking-[0.12em] opacity-0 transition-all duration-300 group-hover:ml-3 group-hover:max-w-44 group-hover:opacity-100">Solicitar orçamento</span></a>
     </main>
   );
 }
